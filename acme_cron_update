@@ -1,0 +1,159 @@
+#!/bin/bash
+#
+# Acme-Tiny Automation, https://github.com/sd2k9/acme-tiny-automation
+# GPL3, Copyright (C) 2019 Robert Lange (https://sethdepot.org/site/RoLa.html)
+#
+# Cron ACME Letsencrypt certificate updater.
+# Executed via cron as user acme:acme .
+# Place the cron file from ./cron.d/acme-tiny
+# into the directory /etc/cron.d/
+#
+# ------------------------------------------------------------------------------
+
+# *** User Settings ***
+
+# Certificate basenames to update
+ACME_FILES="EXAMPLE.ORG DOMAINNAME2 DOMAINNAME3"
+
+# Test mode: True when defined (only echo commands)
+# TESTMODE=1
+# Enabe for DEBUG Verbosity
+# set -o verbose
+# set -o xtrace
+
+# When you followed the suggested setup in README.md, no changes below are needed
+# ACME Web challenge directory
+ACME_DIR="/srv/support/acme-challenge/"
+# ACME config directory
+ACME_ETC="/etc/acme-tiny/"
+# ACME Account Key
+ACME_ACCOUNT="account.key"
+
+
+# ------------------------------------------------------------------------------
+
+# *** Internal Settings and Variables - do not touch ***
+
+# Set to true when a new certificate was fetched
+NEW_CERT=0
+# Treat uninitialised variable as error and exit script
+set -u
+# To catch failing commands in a pipe, the exit status $? reflects
+# the last non-zero exit code of any program in the pipe
+set -o pipefail
+
+# ------------------------------------------------------------------------------
+
+# *** Functions ***
+
+# Abort on tool error (errorcode <> 0)
+function abort_on_error() {
+    local err
+    err=$1
+    shift
+    if [[ $err -ne 0 ]]; then
+	   echo "ERROR: Program execution failed with error code $err!"
+	   exit 1
+    fi
+}
+# Execute this tool
+# Caution: Use \"text with spaces\" to escape spaces
+function exec_tool() {
+   echo "$@"
+   if [[ -z ${TESTMODE:-} ]]; then
+       eval "$@"
+       abort_on_error $?
+   fi
+}
+
+# Check for change and copy new certificates in place
+# 1.P: Basename of certificate file
+function replace_cert() {
+    local fil
+    fil=$1
+    shift
+
+    if [[ -n ${TESTMODE:-} ]]; then
+	# In Testmode do nothing
+	echo "Testmode: Pretending certificate $fil is unchanged"
+	return
+    fi
+
+    # Is the new file created at all?
+    if [[ ! -f "$fil.new" ]]; then
+	   echo "ERROR: $fil.new is missing!"
+	   exit 1
+    fi
+    # File did not change? Remove and we're done here
+    diff -q "$fil" "$fil.new"
+    if [[ $? -eq 0 ]]; then
+	echo "Certificate $fil unchanged"
+	exec_tool rm -v "$fil.new"
+	return
+    fi
+    echo "Certificate $fil changed - Replace it"
+    NEW_CERT=1
+    if [[ -f "$fil.bak" ]]; then
+	exec_tool chmod u=rw "$fil.bak"
+    fi
+    exec_tool cp -v "$fil" "$fil.bak"
+    exec_tool chmod u=rw "$fil"
+    exec_tool mv -v "$fil.new" "$fil"
+    exec_tool chmod u=r,og= "$fil" "$fil.bak"
+    return
+}
+
+
+# ------------------------------------------------------------------------------
+
+# *** Hello
+# Check for correct user
+if [[ $(id --user --name) != "acme" ]]; then
+    echo "ERROR: Program can only run from user \"acme\""
+    exit 1
+fi
+
+echo "$0 started at $(date)"
+
+if [[ -n ${TESTMODE:-} ]]; then
+    echo "Testmode/Dry-Run enabled - only echo commands, don't execute them"
+fi
+
+# Set correct umask
+echo "Set umask to 0022"
+umask 0022
+
+# Change to right directory
+if [[ ! -d "$ACME_ETC" ]]; then
+    echo "ERROR: Acme config directory $ACME_ETC does not exist!"
+    exit 1
+fi
+echo cd "$ACME_ETC"
+cd "$ACME_ETC"
+
+# *** Trigger acme update script for all domains
+for cert in $ACME_FILES; do
+    # Remove old file, if existing
+    if [[ -f "$cert.crt.new" ]]; then
+	exec_tool rm -v "$cert.crt.new"
+    fi
+    # Request new certificate
+    echo acme-tiny --account-key "$ACME_ACCOUNT" --csr "$cert.csr" \
+	 --acme-dir $ACME_DIR \> "$cert.crt.new"
+    if [ -z ${TESTMODE:-} ]; then
+	acme-tiny --account-key "$ACME_ACCOUNT" --csr "$cert.csr" \
+	     --acme-dir $ACME_DIR >  "$cert.crt.new"
+	abort_on_error $?
+    fi
+    # Copy new certificates in place
+    replace_cert "$cert.crt"
+done
+
+# *** Restart services when any certificate was updated
+if [[ $NEW_CERT -ne 0 ]]; then
+    echo "Restart services when any certificate was updated"
+    exec_tool sudo /usr/local/sbin/acme_restart_services
+fi
+
+# *** Done
+echo "$0 finished"

@@ -1,0 +1,11 @@
+# Acme-Tiny Automation, https://github.com/sd2k9/acme-tiny-automation
+# GPL3, Copyright (C) 2019 Robert Lange (https://sethdepot.org/site/RoLa.html)
+#
+/var/log/acme_cron_update.log {
+	yearly
+	missingok
+	rotate 5
+	compress
+	notifempty
+	create 660 root acme
+}

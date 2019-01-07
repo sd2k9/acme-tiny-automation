@@ -1,0 +1,27 @@
+#!/bin/bash
+#
+# Acme-Tiny Automation, https://github.com/sd2k9/acme-tiny-automation
+# GPL3, Copyright (C) 2019 Robert Lange (https://sethdepot.org/site/RoLa.html)
+#
+# ACME Service restarter after new certificates are fetched
+# This tool must run as root
+# To execute it from the acme user via sudo, add the following sudo entry
+# # acme user can call service restart script without password
+# acme	ALL = (root) NOPASSWD: /usr/local/sbin/acme_restart_services
+#
+#
+# ------------------------------------------------------------------------------
+# Check for correct user
+if [[ $(id --user) != 0 ]]; then
+    echo "ERROR: Program can only run from root"
+    exit 1
+fi
+
+
+# *** Do your work
+echo "Restarting apache ..."
+service apache2 graceful
+echo "Restarting dovecot ..."
+service dovecot reload
+echo "Restarting postfix ..."
+service postfix reload

@@ -1,0 +1,18 @@
+# Acme-Tiny Automation, https://github.com/sd2k9/acme-tiny-automation
+# GPL3, Copyright (C) 2019 Robert Lange (https://sethdepot.org/site/RoLa.html)
+#
+# Call acme-tiny update script every month
+# And write the output into the logfile
+# /var/log/acme_cron_update.log
+# Make sure the logfile can be written by the acme user
+#
+# Set extended path (default is /usr/bin:/bin)
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+#
+# Send script output to user root
+MAILTO=root
+#
+# Every month the 6th at 3:25am
+24 3 6 * *	acme	/usr/local/sbin/acme_cron_update 2>&1 | tee -a /var/log/acme_cron_update.log
+# For test: execute it every week instead
+# @weekly	acme	/usr/local/sbin/acme_cron_update 2>&1 | tee -a /var/log/acme_cron_update.log
