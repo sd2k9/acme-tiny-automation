@@ -4,12 +4,12 @@ Acme-Tiny Automation for Debian
 
 Overview
 --------
-[https://letsencrypt.org](Letsencrypt) provides
+[Let's Encrypt](https://letsencrypt.org) provides
 SSL certificates for your services.  
 Server validation and certificate fetching is done via the acme protocol,
 for which a number of clients exists.
 
-(Acme-tiny)[https://github.com/diafygi/acme-tiny]
+[Acme-tiny](https://github.com/diafygi/acme-tiny)
 is one of the lightweight tools among them.  
 The author keeps the whole script below 200 lines to allow
 for easy auditing.  
@@ -56,7 +56,7 @@ Server Preparation
   `adduser --no-create-home --disabled-login --group acme`  
   `adduser --no-create-home --disabled-login --ingroup acme acme`
 1. Change login shell in /etc/passwd for acme to /usr/sbin/nologin
-1. Create config directory
+1. Create config directory  
    `mkdir /etc/acme-tiny`  
    `chown acme:root /etc/acme-tiny`  
    `chmod u=rwx,og= /etc/acme-tiny`
@@ -71,12 +71,12 @@ Server Preparation
    Create file [acme.conf](apache/acme.conf) as
     /etc/apache2/sites-available/acme.conf
 1.  Include this file in all site files, e.g.  
-    `#ACME-Challenge directory`  
+    `# ACME-Challenge directory`  
     `include /etc/apache2/sites-available/acme.conf`
 
 
 ##### Setup acme-tiny
-1. cd /etc/acme-tiny
+1. `cd /etc/acme-tiny`
 1. Create private account key  
     `openssl genrsa 4096 > account.key`
 1. Generate domain private key(s) for each domain  
