@@ -88,7 +88,8 @@ Server Preparation
       `openssl req -new -sha256 -key DOMAINNAME.key -subj "/" -reqexts SAN \
         -config <(cat /etc/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:DOMAINNAME,DNS:sub1.DOMAINNAME,DNS:sub2.DOMAINNAME")) > DOMAINNAME.csr`
 1. Adapt permissions  
-   `chown acme:acme *.key *.csr`  
+   `chown root:root *.key`  
+   `chown acme:acme account.key *.csr`  
    `chmod u=r,og=   *.key *.csr`
 
 ##### Test Setup
